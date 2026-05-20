@@ -267,7 +267,7 @@ def run_monitor():
             api_key=ANTHROPIC_API_KEY
         )
 
-        if ai_result.get("impact_level") in ["HIGH", "MEDIUM"]:
+        if ai_result.get("impact_level") in ["HIGH", "MEDIUM", "LOW"]:
             message = format_alert(article, ai_result, virality_score, query)
             if send_telegram_message(message):
                 sent_articles.add(article_id)
