@@ -17,7 +17,7 @@ TELEGRAM_CHAT_ID  = os.environ.get("TELEGRAM_CHAT_ID")
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
 
 JAKARTA_TZ  = pytz.timezone("Asia/Jakarta")
-MIN_SHARES  = 10
+MIN_SHARES  = 0
 CHECK_HOURS = list(range(6, 24))
 
 
