@@ -47,7 +47,24 @@ def is_check_time():
 
 
 def fetch_news(query):
-    yesterday = (datetime.now(timezone.utc) - tim
+   def fetch_news(query):
+    yesterday = (datetime.now(timezone.utc) - timedelta(hours=24)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    url = "https://newsapi.org/v2/everything"
+    params = {
+        "q": query,
+        "from": yesterday,
+        "language": "en",
+        "sortBy": "popularity",
+        "pageSize": 10,
+        "apiKey": NEWS_API_KEY
+    }
+    try:
+        resp = requests.get(url, params=params, timeout=15)
+        resp.raise_for_status()
+        return resp.json().get("articles", [])
+    except Exception as e:
+        print(f"  NewsAPI error for '{query}': {e}")
+        return []
 
 SEARCH_QUERIES = [
     # RWA
