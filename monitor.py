@@ -20,40 +20,6 @@ JAKARTA_TZ  = pytz.timezone("Asia/Jakarta")
 MIN_SHARES  = 10
 CHECK_HOURS = list(range(6, 24))
 
-SEARCH_QUERIES = [
-    # === RWA & Tokenization ===
-    "real world asset tokenization",
-    "RWA crypto blockchain tokenized",
-    "tokenized real estate blockchain",
-    "tokenized bonds crypto",
-    "asset tokenization DeFi",
-    "real world asset DeFi protocol",
-    "tokenized commodities blockchain",
-    "RWA crypto regulation",
-
-    # === Nikel & Tambang (Tokenisasi) ===
-    "nickel mine tokenization blockchain",
-    "nickel commodity crypto token",
-    "Indonesia nickel tokenized asset",
-    "nickel mining real world asset",
-    "tokenized nickel investment",
-    "EV battery nickel blockchain",
-    "nickel supply chain tokenization",
-
-    # === Tambang Nikel Indonesia (Berita Bisnis) ===
-    "tambang nikel Indonesia",
-    "nikel Indonesia ekspor",
-    "Indonesia nickel mining news",
-    "Indonesia nickel export ban",
-    "hilirisasi nikel Indonesia",
-    "Indonesia nickel smelter",
-    "HPAL nickel Indonesia",
-    "Harita Nickel Antam Vale Indonesia",
-    "nikel Sulawesi Maluku Halmahera",
-    "Indonesia battery supply chain nickel",
-    "Indonesia EV nickel investment",
-    "kebijakan nikel Indonesia"
-]
 
 TRUSTED_DOMAINS = [
     "coindesk.com", "cointelegraph.com", "decrypt.co",
@@ -81,7 +47,23 @@ def is_check_time():
 
 
 def fetch_news(query):
-    yesterday = (datetime.now(timezone.utc) - timedelta(hours=24)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    yesterday = (datetime.now(timezone.utc) - tim
+
+SEARCH_QUERIES = [
+    # RWA
+    "real world asset tokenization",
+    "RWA crypto blockchain",
+    "tokenized assets DeFi",
+    "RWA crypto regulation",
+
+    # Nikel Indonesia
+    "Indonesia nickel mining",
+    "hilirisasi nikel Indonesia",
+    "tambang nikel Indonesia",
+    "Indonesia nickel export"
+]
+
+edelta(hours=24)).strftime("%Y-%m-%dT%H:%M:%SZ")
     url = "https://newsapi.org/v2/everything"
     params = {
         "q": query,
@@ -313,7 +295,7 @@ if __name__ == "__main__":
     send_startup_message()
     run_monitor()
 
-    schedule.every(1).hours.do(run_monitor)
+    schedule.every(3).hours.do(run_monitor)
     print("\n⏰ Scheduler active — checking every hour (06:00-23:00 WIB)...")
 
     while True:
