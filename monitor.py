@@ -6,41 +6,19 @@ import hashlib
 from datetime import datetime, timedelta, timezone
 from dateutil import parser as dateparser
 import pytz
-from ai_filter import analyze_news_impact
 
 NEWS_API_KEY = os.environ.get("NEWS_API_KEY")
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
-ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
 
 JAKARTA_TZ = pytz.timezone("Asia/Jakarta")
-MIN_SHARES = 0
 CHECK_HOURS = list(range(6, 24))
 
 SEARCH_QUERIES = [
     "real world asset tokenization",
     "RWA crypto blockchain",
-    "tokenized assets DeFi",
-    "RWA crypto regulation",
     "Indonesia nickel mining",
-    "hilirisasi nikel Indonesia",
-    "tambang nikel Indonesia",
-    "Indonesia nickel export"
-]
-
-TRUSTED_DOMAINS = [
-    "coindesk.com", "cointelegraph.com", "decrypt.co",
-    "theblock.co", "blockworks.co", "cryptoslate.com",
-    "forbes.com", "reuters.com", "bloomberg.com",
-    "ft.com", "wsj.com", "techcrunch.com",
-    "messari.io", "cryptobriefing.com",
-    "beincrypto.com", "cryptonews.com",
-    "theguardian.com", "bbc.com", "cnbc.com",
-    "kontan.co.id", "bisnis.com", "katadata.co.id",
-    "cnbcindonesia.com", "detik.com", "tempo.co",
-    "mining.com", "miningweekly.com", "kitco.com",
-    "spglobal.com", "metalbulletin.com",
-    "indonesiabusinesspost.com", "jakartaglobe.id"
+    "tambang nikel Indonesia"
 ]
 
 sent_articles = set()
@@ -59,7 +37,7 @@ def fetch_news(query):
         "from": yesterday,
         "language": "en",
         "sortBy": "popularity",
-        "pageSize": 10,
+        "pageSize": 5,
         "apiKey": NEWS_API_KEY
     }
     try:
@@ -67,13 +45,11 @@ def fetch_news(query):
         resp.raise_for_status()
         return resp.json().get("articles", [])
     except Exception as e:
-        print("NewsAPI error for " + query + ": " + str(e))
+        print("NewsAPI error: " + str(e))
         return []
 
-def is_from_trusted_source(article):
-    return True
 
-def send_telegram_message(message):
+def send_telegram(message):
     url = "https://api.telegram.org/bot" + TELEGRAM_TOKEN + "/sendMessage"
     payload = {
         "chat_id": TELEGRAM_CHAT_ID,
@@ -90,99 +66,73 @@ def send_telegram_message(message):
         return False
 
 
-def format_alert(article, ai_analysis, query):
-    title = article.get("title", "No title")
-    source = article.get("source", {}).get("name", "Unknown")
-    url = article.get("url", "")
-    published = article.get("publishedAt", "")
-
-    try:
-        pub_dt = dateparser.parse(published)
-        pub_jakarta = pub_dt.astimezone(JAKARTA_TZ)
-        pub_str = pub_jakarta.strftime("%d %b %Y, %H:%M WIB")
-    except Exception:
-        pub_str = published
-
-    is_nickel = any(kw in query.lower() for kw in ["nickel", "nikel", "tambang", "hilirisasi"])
-    category = "NICKEL MINING" if is_nickel else "RWA NEWS"
-
-    message = (
-        "*" + category + "*\n\n"
-        "*" + title + "*\n\n"
-        "Source: " + source + "\n"
-        "Published: " + pub_str + "\n"
-        "Keyword: " + query + "\n\n"
-        "Summary: " + ai_analysis.get("summary", "N/A") + "\n\n"
-        "[Baca Selengkapnya](" + url + ")"
-    )
-    return message
-
-
 def run_monitor():
     if not is_check_time():
-        now_jakarta = datetime.now(JAKARTA_TZ)
-        print("Skip - di luar jam operasional " + now_jakarta.strftime("%H:%M") + " WIB")
+        print("Skip - luar jam operasional")
         return
 
     now_str = datetime.now(JAKARTA_TZ).strftime("%Y-%m-%d %H:%M WIB")
     print("Checking news at " + now_str)
-
-    found_count = 0
+    found = 0
 
     for query in SEARCH_QUERIES:
         print("Searching: " + query)
         articles = fetch_news(query)
+        print("Found " + str(len(articles)) + " articles")
 
         for article in articles:
-            if not is_from_trusted_source(article):
-                continue
+            title = article.get("title", "")
+            url = article.get("url", "")
+            source = article.get("source", {}).get("name", "Unknown")
+            published = article.get("publishedAt", "")
 
-            article_id = hashlib.md5((article.get("url", "") + article.get("title", "")).encode()).hexdigest()
+            article_id = hashlib.md5((url + title).encode()).hexdigest()
             if article_id in sent_articles:
                 continue
 
-            ai_result = {"summary": "Berita terkait RWA dan tambang nikel Indonesia."}
-message = format_alert(article, ai_result, query)
-            if send_telegram_message(message):
+            try:
+                pub_dt = dateparser.parse(published)
+                pub_str = pub_dt.astimezone(JAKARTA_TZ).strftime("%d %b %Y, %H:%M WIB")
+            except Exception:
+                pub_str = published
+
+            is_nickel = any(kw in query.lower() for kw in ["nickel", "nikel", "tambang"])
+            category = "NICKEL MINING" if is_nickel else "RWA NEWS"
+
+            message = (
+                "*" + category + "*\n\n"
+                + "*" + title + "*\n\n"
+                + "Source: " + source + "\n"
+                + "Published: " + pub_str + "\n\n"
+                + "[Baca Selengkapnya](" + url + ")"
+            )
+
+            if send_telegram(message):
                 sent_articles.add(article_id)
-                found_count += 1
-                print("Alert sent: " + article.get("title", "")[:50])
+                found += 1
+                print("Sent: " + title[:50])
 
-            time.sleep(2)
+            time.sleep(1)
 
-        time.sleep(1)
+        time.sleep(2)
 
-    print("Done. Sent " + str(found_count) + " alert(s) this run.")
-
-
-def send_startup_message():
-    now_jakarta = datetime.now(JAKARTA_TZ)
-    message = (
-        "RWA and Nickel News Monitor is LIVE!\n\n"
-        "Started: " + now_jakarta.strftime("%d %b %Y, %H:%M WIB") + "\n"
-        "Keywords: " + str(len(SEARCH_QUERIES)) + "\n"
-        "Active hours: 06:00 - 23:00 WIB\n"
-        "Check interval: every 3 hours\n\n"
-        "Bot siap monitoring!"
-    )
-    send_telegram_message(message)
-    print("Startup message sent!")
+    print("Done. Sent " + str(found) + " alerts.")
 
 
 if __name__ == "__main__":
-    print("Starting RWA and Nickel News Monitor...")
+    print("Starting monitor...")
 
-    missing = [v for v in ["NEWS_API_KEY", "TELEGRAM_TOKEN", "TELEGRAM_CHAT_ID", "ANTHROPIC_API_KEY"]
+    missing = [v for v in ["NEWS_API_KEY", "TELEGRAM_TOKEN", "TELEGRAM_CHAT_ID"]
                if not os.environ.get(v)]
     if missing:
-        print("Missing env vars: " + str(missing))
+        print("Missing: " + str(missing))
         exit(1)
 
-    send_startup_message()
+    send_telegram("Monitor is LIVE! Checking every 3 hours.")
     run_monitor()
 
     schedule.every(3).hours.do(run_monitor)
-    print("Scheduler active - checking every 3 hours (06:00-23:00 WIB)...")
+    print("Scheduler active...")
 
     while True:
         schedule.run_pending()
