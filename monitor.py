@@ -141,15 +141,8 @@ def run_monitor():
             if article_id in sent_articles:
                 continue
 
-            ai_result = analyze_news_impact(
-                title=article.get("title", ""),
-                description=article.get("description", ""),
-                source=article.get("source", {}).get("name", ""),
-                url=article.get("url", ""),
-                api_key=ANTHROPIC_API_KEY
-            )
-
-            message = format_alert(article, ai_result, query)
+            ai_result = {"summary": "Berita terkait RWA dan tambang nikel Indonesia."}
+message = format_alert(article, ai_result, query)
             if send_telegram_message(message):
                 sent_articles.add(article_id)
                 found_count += 1
