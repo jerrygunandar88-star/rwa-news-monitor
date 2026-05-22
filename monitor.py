@@ -70,12 +70,8 @@ def fetch_news(query):
         print("NewsAPI error for " + query + ": " + str(e))
         return []
 
-
 def is_from_trusted_source(article):
-    url = article.get("url", "").lower()
-    source = article.get("source", {}).get("name", "").lower()
-    return any(domain in url or domain.split(".")[0] in source for domain in TRUSTED_DOMAINS)
-
+    return True
 
 def send_telegram_message(message):
     url = "https://api.telegram.org/bot" + TELEGRAM_TOKEN + "/sendMessage"
